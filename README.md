@@ -6,7 +6,7 @@ For example to get the hardware code and version the following can be used over 
 ```rust,no_run
     use mediatek_brom::{io::BromExecute, Brom};
     # let mut transport = std::io::Cursor::new([0u8; 16]);
-    let brom = transport.execute(Brom::handshake(0x201000)).unwrap();
+    let brom = transport.execute(Brom::handshake()).unwrap();
     let hwcode = transport.execute(brom.hwcode()).unwrap();
     println!("Hwcode: {:x?}", hwcode);
 

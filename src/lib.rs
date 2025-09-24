@@ -307,16 +307,24 @@ pub struct HwCode {
     pub version: u16,
 }
 
-#[derive(Debug)]
-pub struct Brom {
-    address: u32,
+impl HwCode {
+    /// Get DA address from known hardware codes
+    pub fn da_address(&self) -> Option<u32> {
+        match self.code {
+            0x8189 => Some(0x2001000),
+            0x8183 | 0x8188 | 0x8195 | 0x8365 => Some(0x201000),
+            _ => None,
+        }
+    }
 }
 
+#[derive(Debug)]
+pub struct Brom {}
+
 impl Brom {
-    /// Start handshake with the bootrom; The address indicates where to
-    /// load/execute the Download Agent (DA)
-    pub fn handshake(address: u32) -> impl Operation<Value = Self> {
-        HandShake::new().map(move |_| Self { address })
+    /// Start handshake with the bootrom
+    pub fn handshake() -> impl Operation<Value = Self> {
+        HandShake::new().map(move |_| Self {})
     }
 
     /// Get the hardware information from the bootrom
@@ -329,10 +337,10 @@ impl Brom {
     }
 
     // Send DA to bootrom memory
-    pub fn send_da<'d>(&self, data: &'d [u8]) -> impl Operation<Value = ()> + 'd {
+    pub fn send_da<'d>(&self, address: u32, data: &'d [u8]) -> impl Operation<Value = ()> + 'd {
         let len = data.len() as u32;
         Echo::new([Command::SendDa as u8])
-            .chain(Echo::new(self.address.to_be_bytes()))
+            .chain(Echo::new(address.to_be_bytes()))
             .chain(Echo::new(len.to_be_bytes()))
             // Empty signature
             .chain(Echo::new([0; 4]))
@@ -344,9 +352,9 @@ impl Brom {
     }
 
     // Execute a 64 bit DA. Ensure that one has been send first!
-    pub fn jump_da64(&self) -> impl Operation<Value = ()> {
+    pub fn jump_da64(&self, address: u32) -> impl Operation<Value = ()> {
         Echo::new([Command::JumpDa64 as u8])
-            .chain(Echo::new(self.address.to_be_bytes()))
+            .chain(Echo::new(address.to_be_bytes()))
             .chain(Echo::new([0x1]))
             .chain(CheckStatus::default())
             .chain(Echo::new([0x64]))
@@ -410,7 +418,7 @@ mod test {
 
     #[test]
     fn handshake() {
-        let mut handshake = Brom::handshake(0x1234);
+        let mut handshake = Brom::handshake();
         EXPECTED_HANDSHAKE.validate(&mut handshake).unwrap();
     }
 
@@ -421,7 +429,7 @@ mod test {
             ExpectedIo::Read(&[0xfd]),
             ExpectedIo::Read(&[0x81, 0x88, 0x2, 0x3]),
         ]);
-        let mut handshake = Brom::handshake(0x1234);
+        let mut handshake = Brom::handshake();
         let p = EXPECTED_HANDSHAKE.validate(&mut handshake).unwrap();
         let hwcode = HWCODE.validate(&mut p.hwcode()).unwrap();
         assert_eq!(
@@ -458,9 +466,9 @@ mod test {
             // status
             ExpectedIo::Read(&[0x0, 0x0]),
         ]);
-        let mut handshake = Brom::handshake(0x1234);
+        let mut handshake = Brom::handshake();
         let p = EXPECTED_HANDSHAKE.validate(&mut handshake).unwrap();
-        SEND_DA.validate(&mut p.send_da(DATA)).unwrap();
+        SEND_DA.validate(&mut p.send_da(0x1234, DATA)).unwrap();
     }
 
     #[test]
@@ -483,8 +491,8 @@ mod test {
             // status
             ExpectedIo::Read(&[0x00, 0x00]),
         ]);
-        let mut handshake = Brom::handshake(0x1234);
+        let mut handshake = Brom::handshake();
         let p = EXPECTED_HANDSHAKE.validate(&mut handshake).unwrap();
-        JUMP_DA64.validate(&mut p.jump_da64()).unwrap();
+        JUMP_DA64.validate(&mut p.jump_da64(0x1234)).unwrap();
     }
 }
