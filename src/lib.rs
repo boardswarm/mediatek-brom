@@ -1,7 +1,9 @@
 #![cfg_attr(docsrs, feature(doc_auto_cfg))]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![doc = include_str!("../README.md")]
-use std::fmt::Debug;
+use core::fmt::Debug;
 
+#[cfg(feature = "std")]
 pub mod io;
 
 #[derive(Debug)]

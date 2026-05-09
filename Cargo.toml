@@ -10,13 +10,15 @@ repository = "https://github.com/boardswarm/mediatek-brom"
 readme = "README.md"
 
 [dependencies]
-thiserror = "2.0"
+thiserror = { version = "2.0", default-features = false }
 tokio = { version = "1.43.1", features = [ "io-util"], optional = true }
 futures = { version = "0.3", optional = true }
 
 [features]
-tokio = ["dep:tokio"]
-futures = ["dep:futures"]
+default = ["std"]
+std = ["thiserror/std"]
+tokio = ["std", "dep:tokio"]
+futures = ["std", "dep:futures"]
 
 [dev-dependencies]
 anyhow = "1.0.93"

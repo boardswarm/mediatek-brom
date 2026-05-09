@@ -41,12 +41,24 @@ jobs:
       - run: cargo clippy --features tokio -- -D warnings
       - run: cargo clippy --features futures -- -D warnings
 
+  no_std:
+    name: cargo check (no_std)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@master # avoid the tag here to prevent dependabot from updating it
+        with:
+          toolchain: "1.82"
+          targets: thumbv7em-none-eabihf
+      - run: cargo check --no-default-features --target thumbv7em-none-eabihf
+
   allgreen:
     if: always()
     needs:
       - test
       - fmt
       - clippy
+      - no_std
     runs-on: Ubuntu-latest
     steps:
       - name: Decide whether the needed jobs succeeded or failed
